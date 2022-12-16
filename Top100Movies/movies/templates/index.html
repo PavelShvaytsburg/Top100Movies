@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Classifier</title>
+  </head>
+  <body>
+
+    <div>
+        все фильмы
+        <button id="upload_all">показать</button>
+    </div>
+
+    <div>
+        просмотренные фильмы
+        <button id="upload_watched">показать</button>
+    </div>
+
+    <div>
+        Топ 10 фильмов
+        <button id="upload_top10">показать</button>
+    </div>
+
+    <div id="container">
+    </div>
+
+
+
+    <script>
+        // Получаем объект ктопки, берем с html страницы
+        let upload_all = document.getElementById('upload_all');
+        let upload_watched = document.getElementById('upload_watched');
+        let upload_top10 = document.getElementById('upload_top10')
+
+        // Получаем контейнер, в который будут отрисовывать фильмы
+        let div = document.getElementById('container');
+
+        // Каждой кнопке определяем событие event
+        upload_all.addEventListener("click", uploadAllMovies, false);
+        upload_watched.addEventListener("click", uploadWatchedMovies, false);
+        upload_top10.addEventListener("click", uploadTop10Movies, false);
+
+        function updateMovie(rate, is_watched, place_in_top, id, title, description) {
+          //console.log(rate, is_watched, place_in_top, id, title, description)
+          let resultHTML = ""
+
+          let movie = {
+            id: id,
+            rate: (rate == 'null') ?null:rate,
+            title: title,
+            description: description,
+            is_watched: is_watched,
+            place_in_top: (place_in_top == 'null') ?null:place_in_top
+          }
+//          console.log(JSON.stringify(movie))
+          fetch(`http://127.0.0.1:8000/api/v1/movies/${movie.id}/`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(movie)
+          })
+          .then((response) => {
+              return response.json();
+          })
+          .then((movie) => {
+                  resultHTML += `
+                    <p>Сохранено!</p>
+                  `
+              div.insertAdjacentHTML('afterbegin', resultHTML);
+          })
+          .catch((error) => {
+              div.innerText = error;
+          });
+        //
+        // }
+      }
+
+
+        function uploadMovie(movie_id) {
+          div.innerHTML = ""
+          let movieHTML = ""
+
+          fetch(`http://127.0.0.1:8000/api/v1/movies/${movie_id}`, {
+            method: 'GET',
+          })
+          .then((response) => {
+              return response.json();
+          })
+          .then((movie) => {
+                  movieHTML += `
+                    <div>
+                      <h1>Редактирование</h1>
+                      <h2>${movie.title}</h2>
+                      <p>личный рейтинг: <input id="rate" type="text" value=${movie.rate}></p>
+                      <p>описание: ${movie.description}</p>
+                      <p>просмотрено: <input id="is_watched" type="checkbox" ${movie.is_watched ? "checked" : ""}></p>
+                      <p>
+                        позиция в личном топе:
+                        <select  id="top">
+                          <option value='null' ${movie.place_in_top==undefined ? 'selected' : ''}>-</option>
+                          <option value=1 ${movie.place_in_top==1 ? 'selected' : ''}>1</option>
+                          <option value=2 ${movie.place_in_top==2 ? 'selected' : ''}>2</option>
+                          <option value=3 ${movie.place_in_top==3 ? 'selected' : ''}>3</option>
+                          <option value=4 ${movie.place_in_top==4 ? 'selected' : ''}>4</option>
+                          <option value=5 ${movie.place_in_top==5 ? 'selected' : ''}>5</option>
+                          <option value=6 ${movie.place_in_top==6 ? 'selected' : ''}>6</option>
+                          <option value=7 ${movie.place_in_top==7 ? 'selected' : ''}>7</option>
+                          <option value=8 ${movie.place_in_top==8 ? 'selected' : ''}>8</option>
+                          <option value=9 ${movie.place_in_top==9 ? 'selected' : ''}>9</option>
+                          <option value=10 ${movie.place_in_top==10 ? 'selected' : ''}>10</option>
+                        </select>
+                      </p>
+                      <button onclick="updateMovie(rate.value, is_watched.checked, document.getElementById('top').value, ${movie.id}, '${movie.title}', '${movie.description}')">Сохранить</button>
+                    </div>
+                  `
+              div.insertAdjacentHTML('afterbegin', movieHTML);
+          })
+          .catch((error) => {
+              div.innerText = error;
+          });
+
+        }
+
+        function uploadAllMovies() {
+
+            div.innerHTML = "" //обнуление контейнера
+            let moviesHTML = ""
+
+            fetch('http://127.0.0.1:8000/api/v1/movies/', {
+              method: 'GET',
+            })
+            .then((response) => {
+                return response.json();
+            })
+            .then((movies) => {
+                moviesHTML += `<h1>Все фильмы</h1>`
+                for (let movie of movies) {
+                  console.log(movie)
+                  // Вызов функции uploadMovie
+                    moviesHTML += `
+                      <div onclick="uploadMovie(${movie.id})">
+                        <h2>${movie.title}</h2>
+                        <p>рейтинг: ${movie.rate}</p>
+                        <p>описание: ${movie.description}</p>
+                        <img src="${decodeURIComponent(movie.image.slice(22))}" alt="movie_image">
+                        <p>просмотрено: <input type="checkbox" ${movie.is_watched ? "checked" : ""}></p>
+                      </div>
+                    `
+                }
+                div.insertAdjacentHTML('afterbegin', moviesHTML);
+            })
+            .catch((error) => {
+                div.innerText = error;
+            });
+        }
+
+        function uploadWatchedMovies() {
+
+            div.innerHTML = ""
+            let moviesHTML = ""
+
+            fetch('http://127.0.0.1:8000/api/v1/watchedmovies/', {
+              method: 'GET',
+            })
+            .then((response) => {
+                return response.json();
+            })
+            .then((movies) => {
+                moviesHTML += `<h1>Просмотренные фильмы</h1>`
+                for (let movie of movies) {
+                  console.log(movie)
+                    moviesHTML += `
+                      <div onclick="uploadMovie(${movie.id})">
+                        <h2>${movie.title}</h2>
+                        <p>рейтинг: ${movie.rate}</p>
+                        <p>описание: ${movie.description}</p>
+                        <img src="${decodeURIComponent(movie.image.slice(22))}" alt="movie_image">
+                        <p>просмотрено: <input type="checkbox" ${movie.is_watched ? "checked" : ""}></p>
+                        <p>позиция в личном топе: ${movie.place_in_top}</p>
+                      </div>
+                    `
+                }
+                div.insertAdjacentHTML('afterbegin', moviesHTML);
+            })
+            .catch((error) => {
+                div.innerText = error;
+            });
+        }
+
+        function uploadTop10Movies(){
+          div.innerHTML = ""
+          let moviesHTML = ""
+          fetch('http://127.0.0.1:8000/api/v1/topmovies/', {
+            method: 'GET',
+          })
+          .then((response) => {
+              return response.json();
+          })
+          .then((movies) => {
+              moviesHTML += `<h1>Ваш список Топ-10 фильмов</h1>`
+              for (let movie of movies) {
+                console.log(movie)
+                  moviesHTML += `
+                    <div onclick="uploadMovie(${movie.id})">
+                      <h2>${movie.title}</h2>
+                      <p>рейтинг: ${movie.rate}</p>
+                      <p>описание: ${movie.description}</p>
+                      <img src="${decodeURIComponent(movie.image.slice(22))}" alt="movie_image">
+                      <p>просмотрено: <input type="checkbox" ${movie.is_watched ? "checked" : ""}></p>
+                      <p>позиция в личном топе: ${movie.place_in_top}</p>
+                    </div>
+                  `
+              }
+              div.insertAdjacentHTML('afterbegin', moviesHTML);
+          })
+          .catch((error) => {
+              div.innerText = error;
+          });
+
+        }
+
+    </script>
+  </body>
+</html>
